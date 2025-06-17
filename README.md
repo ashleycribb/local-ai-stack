@@ -66,7 +66,7 @@ Copy `anon key` and save it as `SUPABASE_PRIVATE_KEY` in `.env.local`
 ```bash
 node src/scripts/indexBlogLocal.mjs
 ```
-This script takes in all files from /blogs, generate embeddings using [transformers.js](https://github.com/xenova/transformers.js), and store embeddings as well as metadata in Supabase.
+This script takes in all files from /blogs, generate embeddings using [transformers.js](https://github.com/xenova/transformers.js), and store embeddings as well as metadata in Supabase. **It now supports Markdown (.md), Plain Text (.txt), PDF (.pdf), and DOCX (.docx) files.**
 
 ### 7. Run app locally
 
