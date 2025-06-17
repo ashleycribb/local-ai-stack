@@ -12,9 +12,10 @@ import { vectorSearch } from "@/util";
 dotenv.config({ path: `.env.local` });
 
 export async function POST(req: Request) {
-  const { prompt } = await req.json();
+  // Modified to include history and modelName from the request body
+  const { prompt, history, modelName: requestedModelName } = await req.json();
   const ollama_endpoint = process.env.OLLAMA_URL;
-  const ollama_model = process.env.OLLAMA_MODEL;
+  const defaultOllamaModelFromEnv = process.env.OLLAMA_MODEL || "llama2"; // Default from env or 'llama2'
 
   const privateKey = process.env.SUPABASE_PRIVATE_KEY;
   if (!privateKey) throw new Error(`Expected env var SUPABASE_PRIVATE_KEY`);
@@ -32,12 +33,18 @@ export async function POST(req: Request) {
   let model;
 
   if (ollama_endpoint) {
-    console.info("Using Ollama");
+    const effectiveModelName = (typeof requestedModelName === 'string' && requestedModelName.trim() !== '')
+      ? requestedModelName.trim()
+      : defaultOllamaModelFromEnv;
+
+    console.info(`Using Ollama with endpoint: ${ollama_endpoint} and model: ${effectiveModelName}`);
     model = new Ollama({
       baseUrl: ollama_endpoint,
-      model: ollama_model ? ollama_model : "ollama",
+      model: effectiveModelName,
     });
     model.verbose = true;
+    // TODO: Incorporate `history` into the prompt or context if needed for Ollama interactions.
+    // For now, `history` is destructured but not used in this specific Ollama path.
     const data = await vectorSearch(client, prompt);
     const contextData = data.map((d: any) => d.content);
 

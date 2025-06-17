@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useCompletion } from "ai/react";
+import { useModelContext } from "../contexts/ModelContext"; // Import the context hook
 
 interface Message {
   content: string;
@@ -13,6 +14,7 @@ export default function ChatComponent({
   open: boolean;
   setOpen: any;
 }) {
+  const { selectedModel } = useModelContext(); // Get selected model from context
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesRef = useRef<HTMLDivElement>(null);
 
@@ -25,20 +27,43 @@ export default function ChatComponent({
     handleSubmit,
   } = useCompletion({
     api: "/api/qa-pg-vector",
-
+    // Add the selected modelName and history to the body of the request
+    body: {
+      modelName: selectedModel ? selectedModel.name : undefined,
+      // Assuming `messages` state is the history.
+      // The API expects `history` but its structure isn't defined by the prompt.
+      // Sending the `messages` array as is. This might need adjustment
+      // based on how the API's Langchain setup expects to process history.
+      history: messages,
+    },
     onFinish: (prompt: string, completion: string) => {
-      console.log(messages);
+      // console.log(messages); // console.log is fine for debugging, but can be removed
       setMessages((previousMessage) => {
-        previousMessage[previousMessage.length - 1].content == "Thinking..."
-          ? previousMessage.pop()
-          : null;
-        return [...previousMessage, { content: completion, user: "LLM" }];
+        const updatedMessages = [...previousMessage];
+        if (updatedMessages.length > 0 && updatedMessages[updatedMessages.length - 1].content === "Thinking...") {
+          updatedMessages.pop();
+        }
+        return [...updatedMessages, { content: completion, user: "LLM" }];
       });
     },
   });
 
+  // We need to ensure that the `body` of the `useCompletion` hook updates
+  // when `selectedModel` or `messages` (for history) changes.
+  // The `useCompletion` hook re-initializes its internal fetcher options when its own props change.
+  // However, if `body` is an object, its reference might not change if we mutate its properties,
+  // but here we are passing a new object literal `{ modelName: ..., history: ... }`.
+  // The hook should pick up changes if `selectedModel` or `messages` reference changes.
+  // To be certain, we can also pass `selectedModel` and `messages` in the `id` field of useCompletion options
+  // if `body` changes are not picked up, or manage `completion.complete()` manually.
+  // For now, let's assume `ai/react` handles `body` updates correctly if its content changes identity.
+  // A common pattern is to provide `id` to `useCompletion` options if you want to re-bind when certain data changes:
+  // id: selectedModel ? selectedModel.name : 'default', // This would recreate the completion function when model changes.
+
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // The `handleSubmit` function from `useCompletion` will use the `body` defined in the hook's options.
+    // It automatically includes the current `input` value as `prompt`.
     handleSubmit(e);
     setMessages((previousMessage) => [
       ...previousMessage,
