@@ -68,11 +68,24 @@ node src/scripts/indexBlogLocal.mjs
 ```
 This script takes in all files from /blogs, generate embeddings using [transformers.js](https://github.com/xenova/transformers.js), and store embeddings as well as metadata in Supabase. **It now supports Markdown (.md), Plain Text (.txt), PDF (.pdf), and DOCX (.docx) files.**
 
+#### Interactive Indexing UI
+
+Alternatively, you can manage the indexing of your local documents (from the `/blogs` directory) through a user interface.
+
+Navigate to `/manage-indexing` in the application (once you have run `npm run dev`).
+
+From this page, you can:
+- Start the indexing process.
+- View real-time logs and progress of the indexing script.
+- Stop an ongoing indexing process.
+
+This provides a more user-friendly way to update the document embeddings.
+
 ### 7. Run app locally
 
 Now you are ready to test out the app locally! To do this, simply run `npm run dev` under the project root and visit `http://localhost:3000`.
 
-### 6. Deploy the app
+### 8. Deploy the app
 
 If you want to the the local-only app to the next level, feel free to follow instructions on [AI Starter Kit](https://github.com/a16z-infra/ai-getting-started) for using Clerk, Pinecone/Supabase, OpenAI, Replicate and other cloud-based vendors.
 

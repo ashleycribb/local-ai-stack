@@ -110,15 +110,20 @@ async function parseDocx(filePath, fileName, splitter) { // Added splitter
 
 // Main processing logic
 async function main() {
+  console.log("PROGRESS: Indexing process started.");
   const fileNames = fs.readdirSync(blogsDir);
+  console.log(`PROGRESS: Found ${fileNames.length} files to process in '${blogsDir}'.`);
   const splitter = RecursiveCharacterTextSplitter.fromLanguage("markdown", {
     chunkSize: 1000,
     chunkOverlap: 50,
   });
 
   let allLangchainDocs = []; // To store all documents from all parsed files
+  let fileIndex = 0;
 
   for (const fileName of fileNames) {
+    fileIndex++;
+    console.log(`PROGRESS: Processing file ${fileIndex}/${fileNames.length}: ${fileName}`);
     const filePath = path.join(blogsDir, fileName);
     const extension = path.extname(fileName).toLowerCase();
     let parsedDocs = [];
@@ -128,8 +133,6 @@ async function main() {
         parsedDocs = await parseMarkdown(filePath, fileName, splitter);
         break;
       case ".txt":
-        // Pass splitter to parseTxt if you want to enable chunking for .txt files
-        // For now, parseTxt handles content as a single chunk internally.
         parsedDocs = await parseTxt(filePath, fileName, splitter);
         break;
       case ".pdf":
@@ -139,23 +142,25 @@ async function main() {
         parsedDocs = await parseDocx(filePath, fileName, splitter);
         break;
       default:
-        console.log(`Skipping unsupported file type: ${fileName}`);
+        console.log(`PROGRESS: Skipped unsupported file type: ${fileName}`);
         continue; // Skip to next file
     }
-    if (parsedDocs && parsedDocs.length > 0) { // Ensure parsedDocs is not null/undefined
+
+    if (parsedDocs && parsedDocs.length > 0) {
+      console.log(`PROGRESS: Successfully parsed ${fileName}, found ${parsedDocs.length} document(s).`);
       allLangchainDocs.push(...parsedDocs);
+    } else {
+      console.log(`PROGRESS: No documents extracted from ${fileName} or parsing failed.`);
     }
   }
 
   if (allLangchainDocs.length === 0) {
-    console.log("No documents processed. Exiting.");
+    console.log("PROGRESS: No documents processed. Exiting.");
     return;
   }
 
-  console.log(`Total documents processed from all files: ${allLangchainDocs.length}`);
+  console.log(`PROGRESS: Total documents processed from all files: ${allLangchainDocs.length}`);
 
-  // The rest of the script (Supabase client, embedding, insertion) goes here
-  // It will need to operate on `allLangchainDocs`
   const auth = {
     detectSessionInUrl: false,
     persistSession: false,
@@ -168,12 +173,11 @@ async function main() {
     { auth }
   );
 
-  console.log(`Generating embeddings for ${allLangchainDocs.length} document chunks...`);
+  console.log(`PROGRESS: Starting embedding generation for ${allLangchainDocs.length} document chunks...`);
   const embeddingPromises = allLangchainDocs.map((doc) => {
-    // Ensure doc.pageContent is not empty or null before embedding
     if (!doc.pageContent || doc.pageContent.trim() === "") {
-      console.warn(`Skipping embedding for empty content from file: ${doc.metadata.fileName}`);
-      return Promise.resolve(null); // Resolve with null for empty content
+      console.warn(`PROGRESS: Skipping embedding for empty content from file: ${doc.metadata.fileName}`);
+      return Promise.resolve(null);
     }
     return generateEmbedding(doc.pageContent);
   });
@@ -183,7 +187,7 @@ async function main() {
   let insertData = [];
   allLangchainDocs.forEach((doc, index) => {
     const embedding = returnedEmbeddings[index];
-    if (embedding) { // Only insert if embedding was generated
+    if (embedding) {
       insertData.push({
         content: doc.pageContent,
         embedding: embedding,
